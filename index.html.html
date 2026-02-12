@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIB7 — World Wide Scorecard</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e17; --surface: #111827; --surface2: #0f172a; --border: #1e293b; --border2: #334155;
+  --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b; --text4: #475569;
+  --green: #10B981; --yellow: #FBBF24; --orange: #F97316; --red: #EF4444; --blue: #3b82f6;
+  --safety: #E74C3C; --cx: #3498DB; --prod: #2ECC71; --quality: #F39C12; --people: #9B59B6; --sust: #1ABC9C;
+  --font: 'Instrument Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height:100vh; }
+.header { background: linear-gradient(135deg,#0f1729,#1a1f3a 50%,#0f1729); border-bottom:1px solid var(--border); padding:20px 28px; }
+.header-top { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+.logo { width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:14px;color:#fff; }
+.title { font-size:22px; font-weight:700; letter-spacing:-0.02em; }
+.subtitle { font-size:12px; color:var(--text3); font-family:var(--mono); }
+.nav { display:flex; gap:4px; margin-top:16px; flex-wrap:wrap; }
+.nav button { padding:8px 16px; border:none; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; font-family:var(--font); background:transparent; color:var(--text3); transition:all .15s; }
+.nav button.active { background:var(--border2); color:#f8fafc; }
+.nav button:hover:not(.active) { color:var(--text2); }
+.content { padding:24px 28px; max-width:1280px; margin:0 auto; }
+select, input { background:var(--surface2); border:1px solid var(--border2); border-radius:8px; padding:8px 12px; color:var(--text); font-family:var(--mono); font-size:12px; outline:none; }
+.card { background:var(--surface); border-radius:12px; padding:20px; border:1px solid var(--border); margin-bottom:16px; }
+.card-title { font-size:11px; color:var(--text3); font-family:var(--mono); text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.grid6 { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+@media(max-width:900px) { .grid2,.grid3 { grid-template-columns:1fr; } .grid6 { grid-template-columns:repeat(3,1fr); } }
+.pillar-bar { background:var(--surface2); border-radius:6px; height:8px; overflow:hidden; margin:8px 0 4px; }
+.pillar-fill { height:100%; border-radius:6px; transition:width .5s; }
+.tier { font-family:var(--mono); font-size:10px; padding:2px 7px; border-radius:4px; font-weight:600; display:inline-block; }
+.tier-t1 { background:#10B98122; color:#10B981; } .tier-t2 { background:#6EE7B722; color:#6EE7B7; }
+.tier-t3 { background:#FBBF2422; color:#FBBF24; } .tier-t4 { background:#F9731622; color:#F97316; }
+.tier-t5 { background:#EF444422; color:#EF4444; } .tier-na { background:#4a556822; color:#4a5568; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { padding:8px 10px; text-align:left; color:var(--text3); font-family:var(--mono); font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); background:var(--surface2); }
+td { padding:8px 10px; border-bottom:1px solid #1e293b11; }
+.opp-rank { font-family:var(--mono); font-size:18px; font-weight:700; color:#ef444488; min-width:26px; }
+.opp-row { display:flex; align-items:center; gap:10px; padding:6px 10px; background:var(--surface2); border-radius:8px; font-size:12px; margin-bottom:6px; }
+.score-hero { font-size:64px; font-weight:700; font-family:var(--mono); line-height:1; }
+.rank-badge { display:inline-block; font-family:var(--mono); font-size:11px; padding:3px 10px; border-radius:6px; font-weight:600; }
+.trend-chart { width:100%; height:200px; position:relative; }
+.hidden { display:none; }
+.pillar-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.pillar-dot { width:4px; height:20px; border-radius:2px; }
+.metric-card { background:var(--surface2); border-radius:8px; padding:10px 12px; }
+.metric-label { font-size:11px; color:var(--text2); font-family:var(--mono); }
+.mini-tag { font-family:var(--mono); font-size:10px; padding:1px 6px; border-radius:3px; }
+canvas { width:100%!important; }
+.footer { padding:16px 28px; border-top:1px solid var(--border); text-align:center; }
+.footer p { font-size:10px; color:var(--border2); font-family:var(--mono); }
+.evolve-note { font-size:10px; color:var(--text4); font-family:var(--mono); font-style:italic; margin-top:4px; }
+.score-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+.score-chip { background:var(--surface2); border-radius:6px; padding:4px 10px; font-size:11px; font-family:var(--mono); }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="logo">D7</div>
+      <div>
+        <h1 class="title">DIB7 World Wide Scorecard</h1>
+        <p class="subtitle">US West • San Diego • WWSC Small Cluster • Last Updated: Jan 2026</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="monthSelect" onchange="switchMonth()"></select>
+    </div>
+  </div>
+  <div class="nav" id="nav"></div>
+</div>
+
+<div class="content" id="content"></div>
+
+<div class="footer"><p>DIB7 WWSC Dashboard • Data source: Amazon Quick Suite Raw Export • 13 months loaded (Jan 2025 – Jan 2026)</p></div>
+
+<script>
+// ============================================================
+// COMPLETE DATA FROM RAW CSV EXPORT
+// ============================================================
+const MONTHS_DATA = {
+  "2025-01": {
+    totalScore: 74.16, adjustedScore: 85.24, wwRank: 177, volumeCluster: "WWSC Small", avgDailyVol: 18232,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.7969, alloc:0.50, weight:0.110, score:0.0550, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:10.700, alloc:0.96, weight:0.110, score:0.1056, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH_PVA": { pillar:"Productivity", input:0.9945, alloc:1.00, weight:0.095, score:0.0950, label:"DPPH PvA" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:0.9300, alloc:0.80, weight:0.095, score:0.0760, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:0.7706, alloc:0.83, weight:0.000, score:0.0000, label:"FPY %CBRSBM" },
+      "OTD": { pillar:"Quality", input:0.9650, alloc:0.80, weight:0.050, score:0.0400, label:"OTD" },
+      "PLDC": { pillar:"Quality", input:0.9778, alloc:1.00, weight:0.000, score:0.0000, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.9020, alloc:1.00, weight:0.040, score:0.0400, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:13.2028, alloc:0.25, weight:0.040, score:0.0100, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3265, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "SLI": { pillar:"Safety", input:0.0555, alloc:0.80, weight:0.050, score:0.0400, label:"SLI" },
+      "OTR_TSIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.040, score:0.0400, label:"OTR TSIR" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.050, score:0.0500, label:"UTR SIR" },
+      "WDR_%TARGET": { pillar:"Sustainability", input:1.3333, alloc:1.00, weight:0.040, score:0.0400, label:"WDR %Target" },
+    }
+  },
+  "2025-02": {
+    totalScore: 81.40, adjustedScore: 85.68, wwRank: 204, volumeCluster: "WWSC Small", avgDailyVol: 18905,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.6456, alloc:0.13, weight:0.110, score:0.0143, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:13.503, alloc:0.92, weight:0.110, score:0.1012, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH_PVA": { pillar:"Productivity", input:0.9952, alloc:1.00, weight:0.095, score:0.0950, label:"DPPH PvA" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:0.9760, alloc:1.00, weight:0.095, score:0.0950, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:1.0574, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD": { pillar:"Quality", input:0.9788, alloc:0.90, weight:0.050, score:0.0450, label:"OTD" },
+      "PLDC": { pillar:"Quality", input:0.8707, alloc:0.375, weight:0.000, score:0.0000, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.7870, alloc:1.00, weight:0.040, score:0.0400, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:8.2587, alloc:0.75, weight:0.040, score:0.0300, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.1571, alloc:0.87, weight:0.050, score:0.0435, label:"Job Satisfaction" },
+      "SLI": { pillar:"Safety", input:0.0549, alloc:0.80, weight:0.050, score:0.0400, label:"SLI" },
+      "OTR_TSIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.040, score:0.0400, label:"OTR TSIR" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.050, score:0.0500, label:"UTR SIR" },
+      "WDR_%TARGET": { pillar:"Sustainability", input:1.3333, alloc:1.00, weight:0.040, score:0.0400, label:"WDR %Target" },
+    }
+  },
+  "2025-03": {
+    totalScore: 72.40, adjustedScore: 76.21, wwRank: 460, volumeCluster: "WWSC Small", avgDailyVol: 19000,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.7445, alloc:0.38, weight:0.105, score:0.0399, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:14.641, alloc:0.92, weight:0.105, score:0.0966, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9932, alloc:1.00, weight:0.0935, score:0.0935, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9444, alloc:0.9324, weight:0.0015, score:0.0013, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:1.1540, alloc:1.00, weight:0.095, score:0.0950, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:0.9333, alloc:0.8889, weight:0.080, score:0.0711, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9805, alloc:1.00, weight:0.0461, score:0.0461, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:0.6405, alloc:0.00, weight:0.0039, score:0.0000, label:"OTD AMFLEX" },
+      "PLDC": { pillar:"Quality", input:0.8956, alloc:0.50, weight:0.030, score:0.0150, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.6559, alloc:0.8459, weight:0.030, score:0.0253, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:11.3901, alloc:0.50, weight:0.040, score:0.0200, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3692, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:0.9578, alloc:1.00, weight:0.000, score:0.0000, label:"LOI" },
+      "SLI": { pillar:"Safety", input:0.0357, alloc:1.00, weight:0.070, score:0.0700, label:"SLI" },
+      "OTR_TSIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.000, score:0.0000, label:"OTR TSIR" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:5.5771, alloc:0.00, weight:0.100, score:0.0000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+      "WDR_%TARGET": { pillar:"Sustainability", input:1.2634, alloc:1.00, weight:0.040, score:0.0400, label:"WDR %Target" },
+    }
+  },
+  "2025-04": {
+    totalScore: 70.68, adjustedScore: 76.00, wwRank: 507, volumeCluster: "WWSC Small", avgDailyVol: 19500,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.6964, alloc:0.25, weight:0.105, score:0.0262, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:10.405, alloc:0.96, weight:0.105, score:0.1008, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9941, alloc:1.00, weight:0.0947, score:0.0947, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9343, alloc:0.8658, weight:0.0003, score:0.0002, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:1.2247, alloc:1.00, weight:0.095, score:0.0950, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:2.6938, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9850, alloc:1.00, weight:0.0489, score:0.0489, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:0.9230, alloc:0.8658, weight:0.0011, score:0.0009, label:"OTD AMFLEX" },
+      "STOW_WIP": { pillar:"Quality", input:0.8542, alloc:1.00, weight:0.030, score:0.0300, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:16.0714, alloc:0.00, weight:0.040, score:0.0000, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3279, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:0.9559, alloc:1.00, weight:0.050, score:0.0500, label:"LOI" },
+      "SLI": { pillar:"Safety", input:0.0307, alloc:1.00, weight:0.070, score:0.0700, label:"SLI" },
+      "OTR_TSIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.000, score:0.0000, label:"OTR TSIR" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:2.9337, alloc:0.00, weight:0.100, score:0.0000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+    }
+  },
+  "2025-05": {
+    totalScore: 87.27, adjustedScore: 93.84, wwRank: 84, volumeCluster: "WWSC Small", avgDailyVol: 20000,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.7936, alloc:0.50, weight:0.105, score:0.0525, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:7.235, alloc:1.00, weight:0.105, score:0.1050, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9923, alloc:1.00, weight:0.0947, score:0.0947, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9714, alloc:1.00, weight:0.0003, score:0.0003, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:1.1992, alloc:1.00, weight:0.095, score:0.0950, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:3.0567, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9875, alloc:1.00, weight:0.0494, score:0.0494, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:1.0000, alloc:1.00, weight:0.0007, score:0.0007, label:"OTD AMFLEX" },
+      "STOW_WIP": { pillar:"Quality", input:0.8035, alloc:1.00, weight:0.030, score:0.0300, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:6.8433, alloc:0.88, weight:0.040, score:0.0352, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3485, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:1.0000, alloc:1.00, weight:0.050, score:0.0500, label:"LOI" },
+      "SLI": { pillar:"Safety", input:0.0193, alloc:1.00, weight:0.070, score:0.0700, label:"SLI" },
+      "OTR_TSIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.000, score:0.0000, label:"OTR TSIR" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+    }
+  },
+  "2025-06": {
+    totalScore: 82.55, adjustedScore: 88.76, wwRank: 144, volumeCluster: "WWSC Small", avgDailyVol: 20500,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.7811, alloc:0.44, weight:0.105, score:0.0462, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:10.730, alloc:0.96, weight:0.105, score:0.1008, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9954, alloc:1.00, weight:0.0943, score:0.0943, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9239, alloc:0.7992, weight:0.0007, score:0.0005, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:1.2960, alloc:1.00, weight:0.095, score:0.0950, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:2.0236, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9837, alloc:1.00, weight:0.0480, score:0.0480, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:0.7460, alloc:0.333, weight:0.0020, score:0.0006, label:"OTD AMFLEX" },
+      "STOW_WIP": { pillar:"Quality", input:0.8130, alloc:1.00, weight:0.030, score:0.0300, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:18.4264, alloc:0.00, weight:0.040, score:0.0000, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3051, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:1.0000, alloc:1.00, weight:0.050, score:0.0500, label:"LOI" },
+      "SLI": { pillar:"Safety", input:0.0142, alloc:1.00, weight:0.070, score:0.0700, label:"SLI" },
+      "OTR_TSIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.000, score:0.0000, label:"OTR TSIR" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+    }
+  },
+  "2025-07": {
+    totalScore: 85.17, adjustedScore: 87.81, wwRank: 143, volumeCluster: "WWSC Small", avgDailyVol: 21000,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.7249, alloc:0.31, weight:0.105, score:0.0325, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:10.742, alloc:0.96, weight:0.105, score:0.1008, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9959, alloc:1.00, weight:0.0949, score:0.0949, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9230, alloc:0.7992, weight:0.0001, score:0.0000, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:1.1572, alloc:1.00, weight:0.095, score:0.0950, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:1.0102, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9899, alloc:1.00, weight:0.0493, score:0.0493, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:1.0000, alloc:1.00, weight:0.0007, score:0.0007, label:"OTD AMFLEX" },
+      "STOW_WIP": { pillar:"Quality", input:0.7057, alloc:1.00, weight:0.030, score:0.0300, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:10.0000, alloc:0.63, weight:0.040, score:0.0252, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.2807, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:0.9688, alloc:1.00, weight:0.050, score:0.0500, label:"LOI" },
+      "SLI": { pillar:"Safety", input:0.0266, alloc:1.00, weight:0.070, score:0.0700, label:"SLI" },
+      "LEADER_SAFETY_SCORE": { pillar:"Safety", input:0.8121, alloc:0.50, weight:0.000, score:0.0000, label:"Leader Safety" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+      "WDR_%TARGET": { pillar:"Sustainability", input:0.7693, alloc:0.33, weight:0.040, score:0.0132, label:"WDR %Target" },
+    }
+  },
+  "2025-08": {
+    totalScore: 82.29, adjustedScore: 85.72, wwRank: 206, volumeCluster: "WWSC Small", avgDailyVol: 21500,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.7098, alloc:0.31, weight:0.105, score:0.0325, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:8.026, alloc:0.96, weight:0.105, score:0.1008, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9959, alloc:1.00, weight:0.0948, score:0.0948, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9151, alloc:0.7992, weight:0.0002, score:0.0001, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:1.2193, alloc:1.00, weight:0.095, score:0.0950, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:1.3120, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9879, alloc:1.00, weight:0.0491, score:0.0491, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:1.0000, alloc:1.00, weight:0.0009, score:0.0009, label:"OTD AMFLEX" },
+      "PLDC": { pillar:"Quality", input:0.9842, alloc:1.00, weight:0.030, score:0.0300, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.7987, alloc:1.00, weight:0.030, score:0.0300, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:17.6511, alloc:0.00, weight:0.040, score:0.0000, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.2742, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:0.9355, alloc:0.7326, weight:0.050, score:0.0366, label:"LOI" },
+      "SLI": { pillar:"Safety", input:0.0420, alloc:0.90, weight:0.070, score:0.0630, label:"SLI" },
+      "LEADER_SAFETY_SCORE": { pillar:"Safety", input:0.8771, alloc:0.80, weight:0.000, score:0.0000, label:"Leader Safety" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+    }
+  },
+  "2025-09": {
+    totalScore: 82.57, adjustedScore: 86.01, wwRank: 176, volumeCluster: "WWSC Small", avgDailyVol: 21000,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.5976, alloc:0.06, weight:0.105, score:0.0063, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:10.102, alloc:0.96, weight:0.105, score:0.1008, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9961, alloc:1.00, weight:0.0949, score:0.0949, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9486, alloc:0.9324, weight:0.0001, score:0.0000, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:0.8804, alloc:0.67, weight:0.095, score:0.0636, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:1.6690, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9963, alloc:1.00, weight:0.0495, score:0.0495, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:1.0000, alloc:1.00, weight:0.0005, score:0.0005, label:"OTD AMFLEX" },
+      "PLDC": { pillar:"Quality", input:0.9924, alloc:1.00, weight:0.030, score:0.0300, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.7945, alloc:1.00, weight:0.030, score:0.0300, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:5.0577, alloc:1.00, weight:0.040, score:0.0400, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3818, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:1.0000, alloc:1.00, weight:0.050, score:0.0500, label:"LOI" },
+      "LEADER_SAFETY_SCORE": { pillar:"Safety", input:1.0000, alloc:1.00, weight:0.070, score:0.0700, label:"Leader Safety" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+    }
+  },
+  "2025-10": {
+    totalScore: 85.84, adjustedScore: 89.41, wwRank: 100, volumeCluster: "WWSC Small", avgDailyVol: 21500,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.6571, alloc:0.19, weight:0.105, score:0.0199, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:11.064, alloc:0.96, weight:0.105, score:0.1008, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9955, alloc:1.00, weight:0.0936, score:0.0936, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9499, alloc:0.9324, weight:0.0014, score:0.0013, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:1.0335, alloc:1.00, weight:0.095, score:0.0950, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:1.3774, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9814, alloc:1.00, weight:0.0462, score:0.0462, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:0.7681, alloc:0.3996, weight:0.0038, score:0.0015, label:"OTD AMFLEX" },
+      "PLDC": { pillar:"Quality", input:0.9917, alloc:1.00, weight:0.030, score:0.0300, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.7212, alloc:1.00, weight:0.030, score:0.0300, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:7.5130, alloc:0.75, weight:0.040, score:0.0300, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3889, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:0.9818, alloc:1.00, weight:0.050, score:0.0500, label:"LOI" },
+      "LEADER_SAFETY_SCORE": { pillar:"Safety", input:1.0000, alloc:1.00, weight:0.070, score:0.0700, label:"Leader Safety" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+    }
+  },
+  "2025-11": {
+    totalScore: 67.21, adjustedScore: 70.01, wwRank: 449, volumeCluster: "WWSC Small", avgDailyVol: 22000,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.5649, alloc:0.00, weight:0.105, score:0.0000, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:45.391, alloc:0.64, weight:0.105, score:0.0672, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9888, alloc:0.8658, weight:0.0940, score:0.0813, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9360, alloc:0.8658, weight:0.0010, score:0.0008, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:0.7216, alloc:0.13, weight:0.095, score:0.0123, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:1.0601, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9324, alloc:0.7326, weight:0.0463, score:0.0339, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:0.7307, alloc:0.2664, weight:0.0037, score:0.0009, label:"OTD AMFLEX" },
+      "PLDC": { pillar:"Quality", input:0.9913, alloc:1.00, weight:0.030, score:0.0300, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.6503, alloc:0.8459, weight:0.030, score:0.0253, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:14.2857, alloc:0.25, weight:0.040, score:0.0100, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.2821, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:1.0000, alloc:1.00, weight:0.050, score:0.0500, label:"LOI" },
+      "LEADER_SAFETY_SCORE": { pillar:"Safety", input:0.9959, alloc:1.00, weight:0.070, score:0.0700, label:"Leader Safety" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+    }
+  },
+  "2025-12": {
+    totalScore: 71.90, adjustedScore: 71.90, wwRank: 434, volumeCluster: "WWSC Small", avgDailyVol: 22461,
+    metrics: {
+      "CONCESSIONS": { pillar:"Customer Experience", input:0.4714, alloc:0.00, weight:0.105, score:0.0000, label:"Concessions" },
+      "DEA CORE": { pillar:"Customer Experience", input:42.564, alloc:0.68, weight:0.105, score:0.0714, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9859, alloc:0.7992, weight:0.0941, score:0.0752, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9493, alloc:0.9324, weight:0.0009, score:0.0008, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:0.9298, alloc:0.80, weight:0.095, score:0.0760, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:1.3980, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9600, alloc:0.8658, weight:0.0473, score:0.0409, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:0.7643, alloc:0.3996, weight:0.0027, score:0.0010, label:"OTD AMFLEX" },
+      "PLDC": { pillar:"Quality", input:0.9829, alloc:1.00, weight:0.030, score:0.0300, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.5127, alloc:0.3845, weight:0.030, score:0.0115, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:8.2599, alloc:0.75, weight:0.040, score:0.0300, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3478, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LOI": { pillar:"People", input:0.9623, alloc:1.00, weight:0.050, score:0.0500, label:"LOI" },
+      "LEADER_SAFETY_SCORE": { pillar:"Safety", input:0.8398, alloc:0.60, weight:0.070, score:0.0420, label:"Leader Safety" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+      "WDR_%TARGET": { pillar:"Sustainability", input:0.6317, alloc:0.00, weight:0.040, score:0.0000, label:"WDR %Target" },
+    }
+  },
+  "2026-01": {
+    totalScore: 72.61, adjustedScore: 85.92, wwRank: 170, volumeCluster: "WWSC Small", avgDailyVol: 22574,
+    superRank: 16, subSuperRank: 9, regionRank: 3, subRegionRank: 1,
+    wwMonthRank: 168, wwQuarterRank: 153, wwYTDRank: 153,
+    vcMonthRank: 65, vcQuarterRank: 58, vcYTDRank: 153,
+    monthScore: 85.92, qtdScore: 85.92, ytdScore: 85.92,
+    topOpp: ["WDR_%TARGET", "LEADER_SAFETY_SCORE", "IAQ_URR"],
+    metrics: {
+      "DEA CORE": { pillar:"Customer Experience", input:18.054, alloc:0.88, weight:0.105, score:0.0924, label:"DEA Core" },
+      "DEA SSD": { pillar:"Customer Experience", input:0.0, alloc:1.00, weight:0.000, score:0.0000, label:"DEA SSD" },
+      "DPPH PVA DSP": { pillar:"Productivity", input:0.9947, alloc:1.00, weight:0.0939, score:0.0939, label:"DPPH PvA DSP" },
+      "DPPH PVA AMFLEX": { pillar:"Productivity", input:0.9647, alloc:1.00, weight:0.0011, score:0.0011, label:"DPPH PvA AMFLEX" },
+      "TPH_%CBRSBM": { pillar:"Productivity", input:0.9389, alloc:0.87, weight:0.095, score:0.0826, label:"TPH %CBRSBM" },
+      "FPY_%CBRSBM": { pillar:"Quality", input:1.3142, alloc:1.00, weight:0.080, score:0.0800, label:"FPY %CBRSBM" },
+      "OTD DSP": { pillar:"Quality", input:0.9925, alloc:1.00, weight:0.0465, score:0.0465, label:"OTD DSP" },
+      "OTD AMFLEX": { pillar:"Quality", input:0.8617, alloc:0.666, weight:0.0036, score:0.0023, label:"OTD AMFLEX" },
+      "PLDC": { pillar:"Quality", input:0.9728, alloc:1.00, weight:0.030, score:0.0300, label:"PLDC" },
+      "STOW_WIP": { pillar:"Quality", input:0.7020, alloc:1.00, weight:0.030, score:0.0300, label:"Stow WIP" },
+      "IAQ_URR": { pillar:"People", input:12.5201, alloc:0.38, weight:0.040, score:0.0152, label:"IAQ URR" },
+      "JOB SATISFACTION": { pillar:"People", input:4.3125, alloc:1.00, weight:0.050, score:0.0500, label:"Job Satisfaction" },
+      "LEADER_SAFETY_SCORE": { pillar:"Safety", input:0.8286, alloc:0.60, weight:0.070, score:0.0420, label:"Leader Safety" },
+      "UTR RIR % TO TARGET": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.100, score:0.1000, label:"UTR RIR" },
+      "UTR_SIR": { pillar:"Safety", input:0.0000, alloc:1.00, weight:0.060, score:0.0600, label:"UTR SIR" },
+      "WDR_%TARGET": { pillar:"Sustainability", input:0.6751, alloc:0.00, weight:0.040, score:0.0000, label:"WDR %Target" },
+    }
+  },
+};
+
+const PILLAR_META = {
+  "Safety": { color:"#E74C3C", order:1 }, "Customer Experience": { color:"#3498DB", order:2 },
+  "Productivity": { color:"#2ECC71", order:3 }, "Quality": { color:"#F39C12", order:4 },
+  "People": { color:"#9B59B6", order:5 }, "Sustainability": { color:"#1ABC9C", order:6 },
+};
+
+const OWNERS = {
+  "CONCESSIONS":{ owner:"Roberto", pillarOwner:"Jose" }, "DEA CORE":{ owner:"Dany", pillarOwner:"Jose" },
+  "DEA SSD":{ owner:"Dany", pillarOwner:"Jose" }, "DPPH_PVA":{ owner:"Fabian", pillarOwner:"Razann" },
+  "DPPH PVA DSP":{ owner:"Fabian", pillarOwner:"Razann" }, "DPPH PVA AMFLEX":{ owner:"Fabian", pillarOwner:"Razann" },
+  "TPH_%CBRSBM":{ owner:"Patrick", pillarOwner:"Razann" }, "FPY_%CBRSBM":{ owner:"Carlos", pillarOwner:"Razann" },
+  "OTD":{ owner:"Cynthia", pillarOwner:"Razann" }, "OTD DSP":{ owner:"Cynthia", pillarOwner:"Razann" },
+  "OTD AMFLEX":{ owner:"Cynthia", pillarOwner:"Razann" }, "PLDC":{ owner:"Debbie", pillarOwner:"Razann" },
+  "STOW_WIP":{ owner:"Pauni", pillarOwner:"Razann" }, "IAQ_URR":{ owner:"Fabian", pillarOwner:"Razann" },
+  "JOB SATISFACTION":{ owner:"Pauni", pillarOwner:"Razann" }, "LOI":{ owner:"Javi", pillarOwner:"Razann" },
+  "SLI":{ owner:"Cynthia", pillarOwner:"Jose" }, "OTR_TSIR":{ owner:"Javi", pillarOwner:"Jose" },
+  "LEADER_SAFETY_SCORE":{ owner:"Cynthia", pillarOwner:"Jose" },
+  "UTR RIR % TO TARGET":{ owner:"Patrick", pillarOwner:"Jose" }, "UTR_SIR":{ owner:"Javi", pillarOwner:"Jose" },
+  "WDR_%TARGET":{ owner:"Dany", pillarOwner:"Jose" },
+};
+
+const MONTH_LABELS = Object.keys(MONTHS_DATA);
+let currentMonth = MONTH_LABELS[MONTH_LABELS.length - 1];
+let activeTab = "overview";
+let charts = {};
+
+function tierClass(alloc) {
+  if (alloc >= 0.95) return "tier-t1";
+  if (alloc >= 0.78) return "tier-t2";
+  if (alloc >= 0.55) return "tier-t3";
+  if (alloc >= 0.20) return "tier-t4";
+  return "tier-t5";
+}
+function tierName(alloc) {
+  if (alloc >= 0.95) return "T1";
+  if (alloc >= 0.78) return "T2";
+  if (alloc >= 0.55) return "T3";
+  if (alloc >= 0.20) return "T4";
+  return "T5";
+}
+
+function getPillarScores(data) {
+  const result = {};
+  for (const [p, meta] of Object.entries(PILLAR_META)) {
+    let score = 0, maxWeight = 0;
+    for (const [mk, md] of Object.entries(data.metrics)) {
+      if (md.pillar === p) { score += md.score; maxWeight += md.weight; }
+    }
+    result[p] = { score, maxWeight, pct: maxWeight > 0 ? (score / maxWeight) * 100 : 0 };
+  }
+  return result;
+}
+
+function getOpportunities(data) {
+  return Object.entries(data.metrics)
+    .map(([k, m]) => ({ key: k, label: m.label, pillar: m.pillar, owner: OWNERS[k]?.owner || "—", gap: (m.weight - m.score) * 100, weight: m.weight, score: m.score, alloc: m.alloc }))
+    .filter(x => x.gap > 0.01)
+    .sort((a, b) => b.gap - a.gap);
+}
+
+function scoreColor(s) { return s >= 85 ? "#10B981" : s >= 70 ? "#FBBF24" : s >= 50 ? "#F97316" : "#EF4444"; }
+
+function init() {
+  const sel = document.getElementById("monthSelect");
+  MONTH_LABELS.forEach(m => { const o = document.createElement("option"); o.value = m; o.textContent = m; sel.appendChild(o); });
+  sel.value = currentMonth;
+  buildNav();
+  render();
+}
+
+function buildNav() {
+  const nav = document.getElementById("nav");
+  const tabs = [
+    { key:"overview", label:"◉ Overview" }, { key:"metrics", label:"◫ Metrics" },
+    { key:"trends", label:"⟋ Trends" }, { key:"opportunities", label:"⚑ Opportunities" },
+  ];
+  nav.innerHTML = tabs.map(t => `<button class="${t.key === activeTab ? 'active' : ''}" onclick="setTab('${t.key}')">${t.label}</button>`).join("");
+}
+
+function setTab(t) { activeTab = t; buildNav(); render(); }
+function switchMonth() { currentMonth = document.getElementById("monthSelect").value; render(); }
+
+function render() {
+  Object.values(charts).forEach(c => c.destroy?.());
+  charts = {};
+  const c = document.getElementById("content");
+  const data = MONTHS_DATA[currentMonth];
+  if (activeTab === "overview") c.innerHTML = renderOverview(data);
+  else if (activeTab === "metrics") c.innerHTML = renderMetrics(data);
+  else if (activeTab === "trends") c.innerHTML = renderTrends();
+  else if (activeTab === "opportunities") c.innerHTML = renderOpportunities(data);
+  setTimeout(initCharts, 50);
+}
+
+function renderOverview(data) {
+  const ps = getPillarScores(data);
+  const opps = getOpportunities(data);
+  const sc = data.adjustedScore;
+  const col = scoreColor(sc);
+  const is2026 = currentMonth === "2026-01";
+
+  let rankHTML = "";
+  if (is2026) {
+    rankHTML = `
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Regional & World Wide Ranks — Jan 2026</div>
+        <div class="grid3" style="gap:8px;">
+          <div class="metric-card"><div class="metric-label">Sub Region Rank</div><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#10B981;">#1</div></div>
+          <div class="metric-card"><div class="metric-label">Region Rank</div><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#10B981;">#3</div></div>
+          <div class="metric-card"><div class="metric-label">Sub Super Rank</div><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:#FBBF24;">#9</div></div>
+          <div class="metric-card"><div class="metric-label">WW Month Rank</div><div style="font-size:20px;font-weight:600;font-family:var(--mono);color:var(--text2);">#168</div></div>
+          <div class="metric-card"><div class="metric-label">Volume Cluster Rank</div><div style="font-size:20px;font-weight:600;font-family:var(--mono);color:var(--text2);">#65</div></div>
+          <div class="metric-card"><div class="metric-label">Avg Daily Volume</div><div style="font-size:20px;font-weight:600;font-family:var(--mono);color:var(--text2);">22,574</div></div>
+        </div>
+      </div>`;
+  }
+
+  let pillarCards = Object.entries(PILLAR_META).sort((a,b) => a[1].order - b[1].order).map(([name, meta]) => {
+    const p = ps[name] || { score:0, maxWeight:0, pct:0 };
+    const metrics = Object.entries(data.metrics).filter(([k,m]) => m.pillar === name);
+    let metricRows = metrics.map(([k, m]) => {
+      const tc = tierClass(m.alloc);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:11px;">
+        <span style="color:var(--text);">${m.label} <span style="color:var(--text4);font-size:10px;">${OWNERS[k]?.owner||""}</span></span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span class="tier ${tc}">${tierName(m.alloc)}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text2);min-width:38px;text-align:right;">${(m.score*100).toFixed(2)}</span>
+        </div>
+      </div>`;
+    }).join("");
+    return `<div class="card" style="border-color:${meta.color}33;padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:600;color:${meta.color};">${name}</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text2);">${(p.score*100).toFixed(1)} / ${(p.maxWeight*100).toFixed(1)}</span>
+      </div>
+      <div class="pillar-bar"><div class="pillar-fill" style="width:${Math.min(p.pct,100)}%;background:linear-gradient(90deg,${meta.color}88,${meta.color});"></div></div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:8px;">${p.pct.toFixed(0)}% earned</div>
+      ${metricRows}
+    </div>`;
+  }).join("");
+
+  let oppRows = opps.slice(0, 5).map((item, i) => `
+    <div class="opp-row">
+      <span class="opp-rank">#${i+1}</span>
+      <div style="flex:1;"><span style="color:var(--text);font-weight:500;">${item.label}</span> <span style="color:var(--text4);font-size:11px;">(${item.pillar} • ${item.owner})</span></div>
+      <span style="font-family:var(--mono);color:#f87171;font-weight:600;">+${item.gap.toFixed(2)}</span>
+    </div>`).join("");
+
+  return `
+    ${rankHTML}
+    <div class="grid2" style="margin-bottom:16px;">
+      <div class="card" style="position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-30px;right:-30px;width:150px;height:150px;border-radius:50%;background:${col};opacity:.07;"></div>
+        <div class="card-title">Adjusted WWSC Score</div>
+        <div class="score-hero" style="color:${col};">${sc.toFixed(2)}%</div>
+        <p style="font-size:13px;color:var(--text2);margin-top:4px;">Raw: ${data.totalScore.toFixed(2)}% • WW Rank #${data.wwRank} • ${currentMonth}</p>
+        <div class="score-row">
+          ${Object.entries(ps).map(([n,p]) => `<div class="score-chip"><span style="color:${PILLAR_META[n].color};">${n==="Customer Experience"?"CX":n.substring(0,4)}</span> <span style="color:var(--text2);">${(p.score*100).toFixed(1)}</span></div>`).join("")}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Score Trend (Adjusted)</div>
+        <canvas id="overviewTrend" height="180"></canvas>
+      </div>
+    </div>
+    <div class="grid3" style="margin-bottom:16px;">${pillarCards}</div>
+    <div class="card">
+      <div class="card-title">Top Opportunities — Points Left on Table</div>
+      ${oppRows}
+    </div>`;
+}
+
+function renderMetrics(data) {
+  let sections = Object.entries(PILLAR_META).sort((a,b) => a[1].order - b[1].order).map(([pName, meta]) => {
+    const metrics = Object.entries(data.metrics).filter(([k,m]) => m.pillar === pName);
+    if (!metrics.length) return "";
+    let rows = metrics.map(([k, m]) => {
+      const tc = tierClass(m.alloc);
+      return `<tr>
+        <td style="font-weight:500;color:var(--text);">${m.label}</td>
+        <td style="color:var(--text2);">${OWNERS[k]?.owner||"—"}</td>
+        <td style="font-family:var(--mono);color:var(--text2);">${(m.weight*100).toFixed(2)}%</td>
+        <td style="font-family:var(--mono);color:var(--text2);">${typeof m.input === "number" ? m.input.toFixed(4) : m.input}</td>
+        <td><span class="tier ${tc}">${tierName(m.alloc)}</span></td>
+        <td style="font-family:var(--mono);color:var(--text2);">${(m.alloc*100).toFixed(1)}%</td>
+        <td style="font-family:var(--mono);font-weight:600;color:var(--text);">${(m.score*100).toFixed(2)}%</td>
+        <td style="font-family:var(--mono);color:var(--text4);">${(m.weight*100).toFixed(2)}%</td>
+        <td style="font-family:var(--mono);color:${((m.weight-m.score)*100) > 0.5 ? '#f87171' : '#10B981'};">${((m.weight-m.score)*100).toFixed(2)}%</td>
+      </tr>`;
+    }).join("");
+    return `<div style="margin-bottom:20px;">
+      <div class="pillar-header"><div class="pillar-dot" style="background:${meta.color};"></div>
+        <h3 style="font-size:14px;font-weight:600;color:${meta.color};">${pName}</h3></div>
+      <div class="card" style="padding:0;overflow:auto;">
+        <table><thead><tr>
+          <th>Metric</th><th>Owner</th><th>Weight</th><th>Input</th><th>Tier</th><th>Alloc%</th><th>Score</th><th>Max</th><th>Gap</th>
+        </tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </div>`;
+  }).join("");
+  return `<h2 style="font-size:18px;font-weight:600;margin-bottom:4px;">All Metrics — ${currentMonth}</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px;">Official scores from Amazon Quick Suite raw data export</p>${sections}`;
+}
+
+function renderTrends() {
+  return `
+    <div class="card"><div class="card-title">Adjusted Score Trend — 13 Months</div><canvas id="trendAdj" height="220"></canvas></div>
+    <div class="card"><div class="card-title">Pillar Score Trends (Points Earned)</div><canvas id="trendPillars" height="240"></canvas></div>
+    <div class="card"><div class="card-title">WW Rank Trend (Lower = Better)</div><canvas id="trendRank" height="180"></canvas></div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">TPH %CBRSBM Input Trend</div><canvas id="trendTPH" height="160"></canvas></div>
+      <div class="card"><div class="card-title">Concessions Input Trend</div><canvas id="trendConc" height="160"></canvas></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">IAQ URR Input Trend</div><canvas id="trendIAQ" height="160"></canvas></div>
+      <div class="card"><div class="card-title">DEA Core (bps) Trend</div><canvas id="trendDEA" height="160"></canvas></div>
+    </div>`;
+}
+
+function renderOpportunities(data) {
+  const opps = getOpportunities(data);
+  let rows = opps.map((item, i) => `
+    <div class="opp-row" style="padding:10px 14px;">
+      <span class="opp-rank" style="font-size:22px;">#${i+1}</span>
+      <div style="flex:1;">
+        <div><span style="color:var(--text);font-weight:600;font-size:13px;">${item.label}</span></div>
+        <div style="font-size:11px;color:var(--text4);margin-top:2px;">${item.pillar} • Owner: ${item.owner} • Alloc: ${(item.alloc*100).toFixed(0)}% • Score: ${(item.score*100).toFixed(2)} / ${(item.weight*100).toFixed(2)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:var(--mono);color:#f87171;font-weight:700;font-size:16px;">+${item.gap.toFixed(2)}pts</div>
+      </div>
+    </div>`).join("");
+
+  const totalOpp = opps.reduce((s, o) => s + o.gap, 0);
+  return `<h2 style="font-size:18px;font-weight:600;margin-bottom:4px;">Opportunity Analysis — ${currentMonth}</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px;">Total recoverable points: <span style="color:#f87171;font-weight:600;font-family:var(--mono);">${totalOpp.toFixed(2)} pts</span> (adjusted score could reach ${(data.adjustedScore + totalOpp).toFixed(1)}% with full allocation)</p>
+    <div class="card"><div class="card-title">All Opportunities Ranked by Impact</div>${rows}</div>
+    <div class="card"><div class="card-title">Opportunity by Pillar</div><canvas id="oppPillar" height="200"></canvas></div>`;
+}
+
+function initCharts() {
+  const labels = MONTH_LABELS;
+  const adjScores = labels.map(m => MONTHS_DATA[m].adjustedScore);
+  const rawScores = labels.map(m => MONTHS_DATA[m].totalScore);
+  const ranks = labels.map(m => MONTHS_DATA[m].wwRank);
+  const chartDefaults = { responsive:true, plugins:{ legend:{ labels:{ color:"#94a3b8", font:{ family:"JetBrains Mono", size:10 } } } }, scales:{ x:{ ticks:{ color:"#64748b", font:{ family:"JetBrains Mono", size:9 }, maxRotation:45 }, grid:{ color:"#1e293b" } }, y:{ ticks:{ color:"#64748b", font:{ family:"JetBrains Mono", size:10 } }, grid:{ color:"#1e293b" } } } };
+
+  if (document.getElementById("overviewTrend")) {
+    charts.ot = new Chart(document.getElementById("overviewTrend"), {
+      type:"line", data:{ labels, datasets:[
+        { label:"Adjusted", data:adjScores, borderColor:"#3b82f6", backgroundColor:"#3b82f622", fill:true, tension:.3, pointRadius:3 },
+      ]}, options:{...chartDefaults, plugins:{...chartDefaults.plugins, legend:{display:false}}, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y, min:60, max:100}}}
+    });
+  }
+
+  if (document.getElementById("trendAdj")) {
+    charts.ta = new Chart(document.getElementById("trendAdj"), {
+      type:"line", data:{ labels, datasets:[
+        { label:"Adjusted Score", data:adjScores, borderColor:"#3b82f6", backgroundColor:"#3b82f622", fill:true, tension:.3, pointRadius:4, borderWidth:2.5 },
+        { label:"Raw Score", data:rawScores, borderColor:"#94a3b8", borderDash:[5,5], tension:.3, pointRadius:2, borderWidth:1.5 },
+      ]}, options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y, min:55, max:100}}}
+    });
+  }
+
+  if (document.getElementById("trendPillars")) {
+    const pillarData = {};
+    for (const [p] of Object.entries(PILLAR_META)) pillarData[p] = [];
+    labels.forEach(m => {
+      const ps = getPillarScores(MONTHS_DATA[m]);
+      for (const [p] of Object.entries(PILLAR_META)) pillarData[p].push((ps[p]?.score||0)*100);
+    });
+    charts.tp = new Chart(document.getElementById("trendPillars"), {
+      type:"line", data:{ labels, datasets: Object.entries(PILLAR_META).map(([p, meta]) => ({
+        label: p === "Customer Experience" ? "CX" : p, data: pillarData[p], borderColor: meta.color, tension:.3, pointRadius:2, borderWidth:1.5,
+      }))}, options:chartDefaults
+    });
+  }
+
+  if (document.getElementById("trendRank")) {
+    charts.tr = new Chart(document.getElementById("trendRank"), {
+      type:"line", data:{ labels, datasets:[
+        { label:"WW Rank", data:ranks, borderColor:"#f59e0b", tension:.3, pointRadius:4, borderWidth:2 },
+      ]}, options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y, reverse:true}}, plugins:{...chartDefaults.plugins, legend:{display:false}}}
+    });
+  }
+
+  // Metric-specific trends
+  const metricTrend = (id, metricKeys, color, label) => {
+    if (!document.getElementById(id)) return;
+    const vals = labels.map(m => {
+      const d = MONTHS_DATA[m];
+      for (const k of metricKeys) { if (d.metrics[k]) return d.metrics[k].input; }
+      return null;
+    });
+    charts[id] = new Chart(document.getElementById(id), {
+      type:"line", data:{ labels, datasets:[{ label, data:vals, borderColor:color, tension:.3, pointRadius:3, borderWidth:2, spanGaps:true }]},
+      options:{...chartDefaults, plugins:{...chartDefaults.plugins, legend:{display:false}}}
+    });
+  };
+  metricTrend("trendTPH", ["TPH_%CBRSBM"], "#2ECC71", "TPH");
+  metricTrend("trendConc", ["CONCESSIONS"], "#3498DB", "Concessions");
+  metricTrend("trendIAQ", ["IAQ_URR"], "#9B59B6", "IAQ URR");
+  metricTrend("trendDEA", ["DEA CORE"], "#3498DB", "DEA Core bps");
+
+  if (document.getElementById("oppPillar")) {
+    const data = MONTHS_DATA[currentMonth];
+    const opps = getOpportunities(data);
+    const pillarOpp = {};
+    opps.forEach(o => { pillarOpp[o.pillar] = (pillarOpp[o.pillar]||0) + o.gap; });
+    const pLabels = Object.keys(pillarOpp).sort((a,b) => pillarOpp[b] - pillarOpp[a]);
+    charts.op = new Chart(document.getElementById("oppPillar"), {
+      type:"bar", data:{ labels:pLabels.map(p => p==="Customer Experience"?"CX":p), datasets:[{
+        data:pLabels.map(p => pillarOpp[p]), backgroundColor:pLabels.map(p => PILLAR_META[p]?.color+"aa"),
+        borderColor:pLabels.map(p => PILLAR_META[p]?.color), borderWidth:1, borderRadius:6,
+      }]}, options:{...chartDefaults, indexAxis:"y", plugins:{...chartDefaults.plugins, legend:{display:false}}}
+    });
+  }
+}
+
+init();
+</script>
+</body>
+</html>
